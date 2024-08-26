@@ -4,24 +4,37 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import '../models/student.dart';
 
+/// Kelas DBHelper untuk mengelola koneksi dan operasi database
 class DBHelper {
+  /// Instansi tunggal dari DBHelper, menerapkan pola Singleton
   static final DBHelper _instance = DBHelper._internal();
+
+  /// Factory constructor untuk mengembalikan instansi tunggal
   factory DBHelper() => _instance;
+
+  /// Konstruktor privat untuk menginisialisasi DBHelper
   DBHelper._internal();
 
+  /// Variabel untuk menyimpan instansi database
   static Database? _db;
 
-  /// Mendapatkan instance database, jika belum diinisialisasi, maka akan memanggil _initDb untuk membuat dan membuka database.
+  /// Mendapatkan instansi database
+  /// Jika database belum diinisialisasi, maka akan memanggil _initDb untuk membuat dan membuka database
   Future<Database> get db async {
     if (_db != null) return _db!;
     _db = await _initDb();
     return _db!;
   }
 
-  /// Menginisialisasi database dengan menentukan path dan membuka database dengan versi 1 serta membuat tabel-tabel yang diperlukan.
+  /// Menginisialisasi database dengan menentukan path dan membuka database dengan versi 1
+  /// Juga membuat tabel-tabel yang diperlukan saat pertama kali database dibuat
   Future<Database> _initDb() async {
+    // Mendapatkan path direktori untuk database
     String dbPath = await getDatabasesPath();
+    // Menentukan path lengkap untuk file database
     String path = join(dbPath, 'mahasiswa.db');
+
+    // Membuka database dan memanggil _onCreate untuk membuat tabel
     return await openDatabase(
       path,
       version: 1,
@@ -29,8 +42,10 @@ class DBHelper {
     );
   }
 
-  /// Membuat tabel-tabel yang diperlukan di database saat pertama kali dibuat, termasuk tabel 'users' dan 'students'.
+  /// Membuat tabel-tabel yang diperlukan di database saat pertama kali dibuat
+  /// Tabel 'users' untuk menyimpan data pengguna dan tabel 'students' untuk menyimpan data mahasiswa
   Future<void> _onCreate(Database db, int version) async {
+    // Membuat tabel 'users'
     await db.execute('''
     CREATE TABLE users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,6 +53,8 @@ class DBHelper {
       password TEXT
     )
   ''');
+
+    // Membuat tabel 'students'
     await db.execute('''
     CREATE TABLE students (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,7 +66,7 @@ class DBHelper {
     )
   ''');
 
-    // Hash password default untuk admin
+    // Meng-hash password default untuk admin dan menyimpannya ke tabel 'users'
     var password = 'Asdf1234';
     var bytes = utf8.encode(password); // Mengonversi password ke bytes
     var hashedPassword = sha256.convert(bytes).toString(); // Meng-hash password
@@ -62,14 +79,14 @@ class DBHelper {
   }
 
   /// Mengambil data pengguna dari tabel 'users' berdasarkan username dan password yang telah di-hash
-  Future<Map<String, dynamic>?> getUser(
-      String username, String password) async {
+  Future<Map<String, dynamic>?> getUser(String username, String password) async {
     var dbClient = await db;
 
     // Meng-hash password untuk pencocokan
     var bytes = utf8.encode(password);
     var hashedPassword = sha256.convert(bytes).toString();
 
+    // Query untuk mencari pengguna berdasarkan username dan password yang di-hash
     List<Map<String, dynamic>> maps = await dbClient.query('users',
         where: 'username = ? AND password = ?',
         whereArgs: [username, hashedPassword]);
